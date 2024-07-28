@@ -6,14 +6,45 @@ SquirrelEngineering.com
 Released into the public domain.
 */
 
+#ifdef __linux__
+#include <cstddef>
+#include <cstring>
+#include <chrono>
+// #include <thread>
+#else
 #include "Arduino.h"
+#endif
 #include "uBloxGPS.h"
 
+
+#ifdef __linux__
+
+/// An alternative to Arduino's millis() function
+unsigned long uBloxGPS::millis()
+{
+    return millisUNIX() - millis0;
+}
+
+/// A helper function to get raw UNIX millis count
+unsigned long uBloxGPS::millisUNIX()
+{
+    // Get the current time since epoch
+    auto now = std::chrono::steady_clock::now();
+    // Convert it to milliseconds since the start of the program
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+    // Return the count of milliseconds
+    return ms.count();
+}
+
+#endif
 
 
 // Class Constructor
 uBloxGPS::uBloxGPS()
 {
+#ifdef __linux__
+    millis0 = millisUNIX();
+#endif
 	FixNumber = 0;
 	MessageNumber = 0;
 	LastValidPositionAge = millis();

@@ -10,8 +10,11 @@ Released into the public domain.
 #ifndef uBloxGPS_h
 #define uBloxGPS_h
 
+#ifdef __linux__
+#include <cstdint>
+#else
 #include "Arduino.h"
-
+#endif
 
 // UBlox Standard Header
 #define UBLOX_HEADER1 0xB5
@@ -116,6 +119,11 @@ private:
 
 	void(*PositionFixCallback)(uBloxGPS *);
 
+#ifdef __linux__
+    // Start of millisecond
+    unsigned long millis0;
+#endif
+
 //
 // Methods
 //
@@ -136,6 +144,10 @@ public:
 private:
 	void ParseNAV_PVTMessage(uint8_t ch);  // Message parser routine
 	uint16_t CalcChecksum(uint8_t *buff, int len); // Calculate checksum value from a buffer + length.
+#ifdef __linux__
+    unsigned long millis();
+    unsigned long millisUNIX();
+#endif
 };
 
 
