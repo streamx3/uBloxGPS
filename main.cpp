@@ -1,5 +1,6 @@
 #include <QCoreApplication>
 #include <QSerialPort>
+#include <QSettings>
 #include <iostream>
 
 /*
@@ -35,11 +36,92 @@ void setup()
     // Serial.println("Serial Started.");
     // Serial2.begin(9600); //GPS Serial port
     // Serial.println("Serial2 Started.");
+    QSettings settings("/etc/ugps/gps.ini", QSettings::IniFormat);
 
-    SetUpGPS();  // Sets up the GPS messages. Turns off default NEMA messages, turns on NAV-PVT message. Does not save this to the GPS.
-    SetUpdate1Hz(); // Set the update rate to 1 per second. (1Hz).
+    QString portName = settings.value("port/name").toString();
+    qint32 baudRate = settings.value("port/baud_rate").toInt();
 
-    uBlox.SetPositionUpdateCallbackFunction(&PositionUpdateCallback);  // Register a calback function to be called when a valid position fix is decoded.
+    QSerialPort::DataBits dataBits;
+    switch(settings.value("port/data_bits").toInt()){
+    case 7:
+        dataBits = QSerialPort::Data7;
+        break;
+    case 6:
+        dataBits = QSerialPort::Data6;
+        break;
+    case 5:
+        dataBits = QSerialPort::Data5;
+        break;
+    default:
+        qCritical() << "Device configuration failure";
+    case 8:
+        dataBits = QSerialPort::Data8;
+        break;
+    }
+
+    QSerialPort::Parity parity;
+    QString parityStr = settings.value("port/parity").toString().toLower();
+    if(parityStr == "no"){
+        parity = QSerialPort::NoParity;
+    } else if(parityStr == "even"){
+        parity = QSerialPort::EvenParity;
+    } else if(parityStr == "odd"){
+        parity = QSerialPort::OddParity;
+    } else if(parityStr == "space"){
+        parity = QSerialPort::SpaceParity;
+    } else if(parityStr == "mark"){
+        parity = QSerialPort::MarkParity;
+    }else{
+        parity = QSerialPort::NoParity;
+        qCritical() << "Invalid parity config!";
+    }
+
+    qint32 stopInt = settings.value("port/stop_bits").toInt();
+    QSerialPort::StopBits stopBits;
+    switch (stopInt) {
+    default:
+        qCritical() << "Invalid stop bits!";
+    case 1:
+        stopBits = QSerialPort::OneStop;
+        break;
+    case 2:
+        stopBits = QSerialPort::TwoStop;
+        break;
+    }
+
+    QString flowStr = settings.value("port/flow_control").toString().toLower();
+    QSerialPort::FlowControl flowCtl;
+    if(flowStr == "no"){
+        flowCtl = QSerialPort::NoFlowControl;
+    } else if(flowStr == "hardware"){
+        flowCtl = QSerialPort::HardwareControl;
+    } else if(flowStr == "software"){
+        flowCtl = QSerialPort::SoftwareControl;
+    } else {
+        qCritical() << "Invalid flow control configuration!";
+    }
+
+    qDebug().noquote() << "Port name:" << portName;
+    qDebug().noquote() << "Baud Rate:" << baudRate;
+    qDebug().noquote() << "Data Bits:" << dataBits;
+    qDebug().noquote() << "Parity:   " << parity;
+    qDebug().noquote() << "Stop Bits:" << stopBits;
+    qDebug().noquote() << "Flow Ctl :" << flowCtl;
+
+
+    Serial2.setPortName(portName);
+    Serial2.setBaudRate(baudRate, QSerialPort::AllDirections);
+    Serial2.setDataBits(dataBits);
+    Serial2.setParity(parity);
+    Serial2.setStopBits(stopBits);
+    Serial2.setFlowControl(flowCtl);
+
+
+
+    // SetUpGPS();  // Sets up the GPS messages. Turns off default NEMA messages, turns on NAV-PVT message. Does not save this to the GPS.
+    // SetUpdate1Hz(); // Set the update rate to 1 per second. (1Hz).
+
+    // uBlox.SetPositionUpdateCallbackFunction(&PositionUpdateCallback);  // Register a calback function to be called when a valid position fix is decoded.
 }
 
 
@@ -181,8 +263,11 @@ int main(int argc, char *argv[])
     // If you do not need a running Qt event loop, remove the call
     // to a.exec() or use the Non-Qt Plain C++ Application template.
 
+    setup();
+    // while(true)
+    //     loop();
+    // return a.exec();
 
-
-    return a.exec();
+    return 0;
 }
 
