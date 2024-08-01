@@ -1,6 +1,9 @@
 #include <QCoreApplication>
+#include <QDebug>
 #include <QSerialPort>
 #include <QSettings>
+#include <QTimer>
+
 #include <iostream>
 
 /*
@@ -251,6 +254,7 @@ void SetUpdate10Hz()
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
+    QTimer timer;
 
     // Set up code that uses the Qt event loop here.
     // Call a.quit() or a.exit() to quit the application.
@@ -264,10 +268,33 @@ int main(int argc, char *argv[])
     // to a.exec() or use the Non-Qt Plain C++ Application template.
 
     setup();
+
+    // QObject::connect(&timer, &QTimer::timeout, &a, &QCoreApplication::quit);
+
+    QObject::connect(&timer, &QTimer::timeout, [&a]() {
+        qDebug().noquote() << "Captured a stop timer";
+        if (Serial2.isOpen())
+            Serial2.close();
+        a.quit();
+    });
+
+    timer.setSingleShot(true);
+    timer.start(5000);
+
+    QTextStream qout(stdout);
+
+    if (Serial2.open(QIODevice::ReadWrite)) {
+        QObject::connect(&Serial2, &QSerialPort::readyRead, [&qout]() {
+            qout << QString(Serial2.readAll());
+            qout.flush();
+        });
+    } else {
+        qCritical() << "Failed to open port!";
+    }
     // while(true)
     //     loop();
-    // return a.exec();
+    return a.exec();
 
-    return 0;
+    // return 0;
 }
 
